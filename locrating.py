@@ -44,7 +44,10 @@ class TextFieldYearMultiplier:
         tag = soup.find_all(text=self.name_)
         if not tag:
             return ''
-        return tag[self.year_ * self.multiplier_ + self.offset_].parent.next_sibling.text
+        index = self.year_ * self.multiplier_ + self.offset_
+        if index >= len(tag):
+            return ''
+        return tag[index].parent.next_sibling.text
 
 
 class TextFieldYear(TextFieldYearMultiplier):
