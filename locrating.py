@@ -1,8 +1,9 @@
 #!/usr/bin/python3
 
-import json
-import re
 from bs4 import BeautifulSoup
+import json
+import os
+import re
 
 class Column:
     def name(self):
@@ -87,27 +88,23 @@ class OfstedRating(Column):
         return ''
 
 
-class Rank:
+class Year(Column):
     def __init__(self, year):
         self.year_ = year
 
     def name(self):
-        return str(self.year_) + ' rank'
+        return str(self.year_) + ' ' + super().name()
 
+
+class Rank(Year):
     def signal(self):
         return 1
 
     def value(self, soup):
-        return re.sub(r'Ranked ([0-9]+) of 16,080 schools \(.*', r'\1', soup.find_all(class_='infobox_exam_ranking')[self.year_].text)
+        return re.sub(',', '', re.sub(r'Ranked ([0-9,]+) of 16,080 schools \(.*', r'\1', soup.find_all(class_='infobox_exam_ranking')[self.year_].text))
 
 
-class Oversubscribed:
-    def __init__(self, year):
-        self.year_ = year
-
-    def name(self):
-        return str(self.year_) + ' Oversubscribed'
-
+class Oversubscribed(Year):
     def signal(self):
         return 1
 
@@ -118,11 +115,38 @@ class Oversubscribed:
         return re.sub(r'([0-9]+%).*', r'\1', oversubscribed)
 
 
-def main():
-    with open('response') as file:
-        javascript = json.load(file)['d']
-        html = re.sub(r'popUpInfoWindow\("(.*?[^\\])".*', r'\1', javascript)
-        soup = BeautifulSoup(html, 'html.parser')
+class Distribution:
+    def __init__(self, year, group):
+        self.year_ = year
+        self.group_ = group
+        self.class_ = 'infobox_catchment_chart'
+
+    def name(self):
+        return str(self.year_) + ' ' + str(self.group_) + ' ' + self.__class__.__name__
+
+    def signal(self):
+        return 1
+
+    def value(self, soup):
+        tag = soup.find(class_=self.class_)
+        if not tag:
+            return ''
+        distance = json.loads(tag['data-chart'])[self.year_ + 1][self.group_ + 1]
+        if distance == 0:
+            return ''
+        return distance
+
+
+class LastDistanceOffered(Distribution):
+    def __init__(self, year):
+        super().__init__(year, 0)
+        self.class_ = 'infobox_catchment_ldo_chart'
+
+    def name(self):
+        return str(self.year_) + self.__class__.__name__
+
+
+def get_fields():
         fields = [
             Name(),
             AtCapacity(),
@@ -146,18 +170,32 @@ def main():
                 TextFieldYearMultiplier('Maths', 1, year, 2, 1),
             ])
         for year in range(5):
-            fields.extend([
-                Oversubscribed(year),
-            ])
-        for field in fields:
-            print(field.signal(), end='\t')
-        print()
-        for field in fields:
-            print(field.name(), end='\t')
-        print()
-        for field in fields:
-            print(field.value(soup), end='\t')
-        print()
+            fields.append(Oversubscribed(year))
+        for year in range(1, 3):
+            fields.append(LastDistanceOffered(year))
+        for year in range(7):
+            for group in range(3):
+                fields.append(Distribution(year, group))
+        return fields
+
+
+def main():
+    fields = get_fields()
+    for field in fields:
+        print(field.signal(), end='\t')
+    print()
+    for field in fields:
+        print(field.name(), end='\t')
+    print()
+    for file in os.listdir('responses'):
+        with open('responses/' + file) as response:
+            javascript = json.load(response)['d']
+            html = eval(re.sub(r'popUpInfoWindow\((".*?[^\\]").*', r'\1', javascript))
+            soup = BeautifulSoup(html, 'html.parser')
+
+            for field in fields:
+                print(field.value(soup), end='\t')
+            print()
 
 
 if __name__ == '__main__':
