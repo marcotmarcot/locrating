@@ -135,9 +135,14 @@ class Oversubscribed(Year):
         return 1
 
     def value(self, soup):
-        oversubscribed = soup.find_all(class_=re.compile('infobox_admissions_(not_)?oversubscribed$'))[self.year_].text
+        tag = soup.find_all(class_=re.compile('infobox_admissions_(not_)?oversubscribed$'))
+        if not tag:
+            return ''
+        oversubscribed = tag[self.year_].text
         if oversubscribed == 'Not Oversubscribed':
             return 0
+        if oversubscribed == '∞% Oversubscribed':
+            return 'Inf'
         return re.sub(r'([0-9]+%).*', r'\1', oversubscribed)
 
 
