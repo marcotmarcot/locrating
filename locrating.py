@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import json
 import os
 import re
+import urllib.parse
 
 class Column:
     def name(self):
@@ -104,6 +105,25 @@ class Rank(Year):
         return re.sub(',', '', re.sub(r'Ranked ([0-9,]+) of 16,080 schools \(.*', r'\1', soup.find_all(class_='infobox_exam_ranking')[self.year_].text))
 
 
+class Reviews:
+    def __init__(self, question, answer, signal):
+        self.question_ = question
+        self.answer_ = answer
+        self.signal_ = signal
+
+    def name(self):
+        return str(self.question_) + ' ' + str(self.answer_) + ' ' + self.__class__.__name__
+
+    def signal(self):
+        return self.signal_
+
+    def value(self, soup):
+        tag = soup.find_all(class_='answers-graph')
+        if not tag:
+            return ''
+        return urllib.parse.parse_qs(urllib.parse.urlparse(tag[self.question_].img['src']).query)['chd'][0][2:].split(',')[self.answer_]
+
+
 class Oversubscribed(Year):
     def signal(self):
         return 1
@@ -169,6 +189,13 @@ def get_fields():
                 TextFieldYear('Writing', 1, year),
                 TextFieldYearMultiplier('Maths', 1, year, 2, 1),
             ])
+        for question in range(11):
+            for answer in range(2):
+                fields.append(Reviews(question, answer, 1))
+            for answer in range(2, 4):
+                fields.append(Reviews(question, answer, -1))
+        fields.append(Reviews(11, 0, 1))
+        fields.append(Reviews(11, 1, -1))
         for year in range(5):
             fields.append(Oversubscribed(year))
         for year in range(1, 3):
