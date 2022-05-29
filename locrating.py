@@ -24,21 +24,30 @@ class AtCapacity(Column):
     def value(self, soup):
         return re.sub(r'At ([0-9]+)% Capacity.*', r'\1%', soup.find(id='capacity').text)
 
-
-class TextFieldYear:
-    def __init__(self, name, signal, year):
+class TextFieldYearMultiplier:
+    def __init__(self, name, signal, year, multiplier, offset):
         self.name_ = name
         self.signal_ = signal
         self.year_ = year
+        self.multiplier_ = multiplier
+        self.offset_ = offset
 
     def name(self):
-        return str(self.year_) + ' ' + self.name_
+        return str(self.year_) + ' ' + str(self.offset_) + ' ' + self.name_
 
     def signal(self):
         return self.signal_
 
     def value(self, soup):
-        return soup.find_all(text=self.name_)[self.year_].parent.next_sibling.text
+        return soup.find_all(text=self.name_)[self.year_ * self.multiplier_ + self.offset_].parent.next_sibling.text
+
+
+class TextFieldYear(TextFieldYearMultiplier):
+    def __init__(self, name, signal, year):
+        super().__init__(name, signal, year, 1, 0)
+
+    def name(self):
+        return str(self.year_) + ' ' + self.name_
 
 
 class TextField(TextFieldYear):
@@ -92,6 +101,23 @@ class Rank:
         return re.sub(r'Ranked ([0-9]+) of 16,080 schools \(.*', r'\1', soup.find_all(class_='infobox_exam_ranking')[self.year_].text)
 
 
+class Oversubscribed:
+    def __init__(self, year):
+        self.year_ = year
+
+    def name(self):
+        return str(self.year_) + ' Oversubscribed'
+
+    def signal(self):
+        return 1
+
+    def value(self, soup):
+        oversubscribed = soup.find_all(class_=re.compile('infobox_admissions_(not_)?oversubscribed$'))[self.year_].text
+        if oversubscribed == 'Not Oversubscribed':
+            return 0
+        return re.sub(r'([0-9]+%).*', r'\1', oversubscribed)
+
+
 def main():
     with open('response') as file:
         javascript = json.load(file)['d']
@@ -108,11 +134,21 @@ def main():
             OfstedYear(),
             OfstedRating(),
             Rank(0),
-            TextFieldYear('Pupils meeting the expected standard', 1, 0),
-            TextFieldYear('Pupils achieving at a higher standard', 1, 0),
-            TextFieldYear('Reading', 1, 0),
-            TextFieldYear('Maths', 1, 0),
         ]
+        for year in range(3):
+            fields.extend([
+                TextFieldYear('Pupils meeting the expected standard', 1, year),
+                TextFieldYear('Pupils achieving at a higher standard', 1, year),
+                TextFieldYearMultiplier('Reading', 1, year, 2, 0),
+                TextFieldYearMultiplier('Maths', 1, year, 2, 0),
+                TextFieldYearMultiplier('Reading', 1, year, 2, 1),
+                TextFieldYear('Writing', 1, year),
+                TextFieldYearMultiplier('Maths', 1, year, 2, 1),
+            ])
+        for year in range(5):
+            fields.extend([
+                Oversubscribed(year),
+            ])
         for field in fields:
             print(field.signal(), end='\t')
         print()
