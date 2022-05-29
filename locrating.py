@@ -41,7 +41,10 @@ class TextFieldYearMultiplier:
         return self.signal_
 
     def value(self, soup):
-        return soup.find_all(text=self.name_)[self.year_ * self.multiplier_ + self.offset_].parent.next_sibling.text
+        tag = soup.find_all(text=self.name_)
+        if not tag:
+            return ''
+        return tag[self.year_ * self.multiplier_ + self.offset_].parent.next_sibling.text
 
 
 class TextFieldYear(TextFieldYearMultiplier):
@@ -102,7 +105,10 @@ class Rank(Year):
         return 1
 
     def value(self, soup):
-        return re.sub(',', '', re.sub(r'Ranked ([0-9,]+) of 16,080 schools \(.*', r'\1', soup.find_all(class_='infobox_exam_ranking')[self.year_].text))
+        tag = soup.find_all(class_='infobox_exam_ranking')
+        if not tag:
+            return ''
+        return re.sub(',', '', re.sub(r'Ranked ([0-9,]+) of 16,080 schools \(.*', r'\1', tag[self.year_].text))
 
 
 class Reviews:
@@ -151,7 +157,10 @@ class Distribution:
         tag = soup.find(class_=self.class_)
         if not tag:
             return ''
-        distance = json.loads(tag['data-chart'])[self.year_ + 1][self.group_ + 1]
+        years = json.loads(tag['data-chart'])
+        if self.year_ + 1 >= len(years) :
+            return ''
+        distance = years[self.year_ + 1][self.group_ + 1]
         if distance == 0:
             return ''
         return distance
@@ -172,7 +181,7 @@ def get_fields():
             AtCapacity(),
             TextField('Pupils per Teacher', 1),
             TextField('Receives Free School Meals', -1),
-            TextField('First Language is not English', -1),
+            TextField('First Language is not English', 1),
             TextField('Persistent Absence', -1),
             TextField('Pupils with SEN Support', -1),
             OfstedYear(),
