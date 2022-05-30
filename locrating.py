@@ -103,15 +103,21 @@ class Year(Column):
         return str(self.year_) + ' ' + super().name()
 
 
+def total_schools(year):
+    if year == 0:
+        return '16,080'
+    return '16,033'
+
+
 class Rank(Year):
     def signal(self):
         return -1
 
     def value(self, soup):
         tag = soup.find_all(class_='infobox_exam_ranking')
-        if not tag:
+        if not tag or self.year_ >= len(tag):
             return ''
-        return re.sub(',', '', re.sub(r'Ranked ([0-9,]+) of 16,080 schools \(.*', r'\1', tag[self.year_].text))
+        return re.sub(',', '', re.sub(r'Ranked ([0-9,]+) of ' + total_schools(self.year_) + ' schools \(.*', r'\1', tag[self.year_].text))
 
 
 class Reviews:
