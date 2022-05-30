@@ -33,7 +33,7 @@ class Address(Column):
         return ''
 
     def value(self, soup):
-        return soup.find(text='London').next_sibling.next_sibling
+        return soup.find(text='Address').parent.parent.contents[1].contents[-1]
 
 
 class AtCapacity(Column):
@@ -271,13 +271,16 @@ def get_fields():
 def main():
     fields = get_fields()
     for field in fields:
-        print(field.weight(), end='\t')
+        if field.weight():
+            print(field.weight(), end='\t')
     print()
     for field in fields:
-        print(field.signal(), end='\t')
+        if field.weight():
+            print(field.signal(), end='\t')
     print()
     for field in fields:
-        print(field.name(), end='\t')
+        if field.weight():
+            print(field.name(), end='\t')
     print()
     for file in os.listdir('responses'):
         with open('responses/' + file) as response:
@@ -286,7 +289,8 @@ def main():
             soup = BeautifulSoup(html, 'html.parser')
 
             for field in fields:
-                print(field.value(soup), end='\t')
+                if field.weight():
+                    print(field.value(soup), end='\t')
             print()
 
 
