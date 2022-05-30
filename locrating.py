@@ -194,10 +194,10 @@ def get_fields():
             TextField('Pupils with SEN Support', -1),
             OfstedYear(),
             OfstedRating(),
-            Rank(0),
         ]
         for year in range(3):
             fields.extend([
+                Rank(year),
                 TextFieldYear('Pupils meeting the expected standard', 1, year),
                 TextFieldYear('Pupils achieving at a higher standard', 1, year),
                 TextFieldYearMultiplier('Reading', 1, year, 2, 0),
