@@ -271,15 +271,15 @@ def get_fields():
 def main():
     fields = get_fields()
     for field in fields:
-        if field.weight():
+        if field.weight() != 0:
             print(field.weight(), end='\t')
     print()
     for field in fields:
-        if field.weight():
+        if field.weight() != 0:
             print(field.signal(), end='\t')
     print()
     for field in fields:
-        if field.weight():
+        if field.weight() != 0:
             print(field.name(), end='\t')
     print()
     for file in os.listdir('responses'):
@@ -289,7 +289,7 @@ def main():
             soup = BeautifulSoup(html, 'html.parser')
 
             for field in fields:
-                if field.weight():
+                if field.weight() != 0:
                     print(field.value(soup), end='\t')
             print()
 
