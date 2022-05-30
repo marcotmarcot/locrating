@@ -105,7 +105,7 @@ class Year(Column):
 
 class Rank(Year):
     def signal(self):
-        return 1
+        return -1
 
     def value(self, soup):
         tag = soup.find_all(class_='infobox_exam_ranking')
