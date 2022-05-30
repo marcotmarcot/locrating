@@ -21,7 +21,7 @@ class Name(Column):
 
 class AtCapacity(Column):
     def signal(self):
-        return 1
+        return 0
 
     def value(self, soup):
         return re.sub(r'At ([0-9]+)% Capacity.*', r'\1%', soup.find(id='capacity').text)
@@ -159,7 +159,7 @@ class Distribution:
         return str(self.year_) + ' ' + str(self.group_) + ' ' + self.__class__.__name__
 
     def signal(self):
-        return 1
+        return 0
 
     def value(self, soup):
         tag = soup.find(class_=self.class_)
