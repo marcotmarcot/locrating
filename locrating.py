@@ -213,10 +213,12 @@ def get_fields():
                 TextFieldYearMultiplier('Maths', 1, year, 2, 1),
             ])
         for question in range(11):
-            for answer in range(2):
-                fields.append(Reviews(question, answer, 1))
-            for answer in range(2, 4):
-                fields.append(Reviews(question, answer, -1))
+            fields.extend([
+                Reviews(question, 0, 1),
+                Reviews(question, 1, 0.5),
+                Reviews(question, 2, -0.5),
+                Reviews(question, 3, -1),
+            ])
         fields.append(Reviews(11, 0, 1))
         fields.append(Reviews(11, 1, -1))
         for year in range(5):
