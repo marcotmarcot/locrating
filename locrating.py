@@ -187,9 +187,9 @@ def get_fields():
         fields = [
             Name(),
             AtCapacity(),
-            TextField('Pupils per Teacher', 1),
+            TextField('Pupils per Teacher', -1),
             TextField('Receives Free School Meals', -1),
-            TextField('First Language is not English', 1),
+            TextField('First Language is not English', -1),
             TextField('Persistent Absence', -1),
             TextField('Pupils with SEN Support', -1),
             OfstedYear(),
