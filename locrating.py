@@ -10,8 +10,14 @@ class Column:
     def name(self):
         return self.__class__.__name__
 
+    def weight(self):
+        return 1
+
 
 class Name(Column):
+    def weight(self):
+        return ''
+
     def signal(self):
         return ''
 
@@ -19,15 +25,43 @@ class Name(Column):
         return soup.find(class_='infobox_name').text
 
 
-class AtCapacity(Column):
+class Address(Column):
+    def weight(self):
+        return ''
+
     def signal(self):
+        return ''
+
+    def value(self, soup):
+        return soup.find(text='London').next_sibling.next_sibling
+
+
+class AtCapacity(Column):
+    def weight(self):
         return 0
+
+    def signal(self):
+        return 1
 
     def value(self, soup):
         return re.sub(r'At ([0-9]+)% Capacity.*', r'\1%', soup.find(id='capacity').text)
 
-class TextFieldYearMultiplier:
-    def __init__(self, name, signal, year, multiplier, offset):
+
+class Year(Column):
+    def __init__(self, year, num_years):
+        self.year_ = year
+        self.num_years_ = num_years
+
+    def weight(self):
+        return (self.year_ + 1) / self.num_years_
+
+    def name(self):
+        return str(self.year_) + ' ' + super().name()
+
+
+class TextFieldYearMultiplier(Year):
+    def __init__(self, name, signal, year, num_years, multiplier, offset):
+        super().__init__(year, num_years)
         self.name_ = name
         self.signal_ = signal
         self.year_ = year
@@ -51,8 +85,8 @@ class TextFieldYearMultiplier:
 
 
 class TextFieldYear(TextFieldYearMultiplier):
-    def __init__(self, name, signal, year):
-        super().__init__(name, signal, year, 1, 0)
+    def __init__(self, name, signal, year, num_years):
+        super().__init__(name, signal, year, num_years, 1, 0)
 
     def name(self):
         return str(self.year_) + ' ' + self.name_
@@ -60,7 +94,7 @@ class TextFieldYear(TextFieldYearMultiplier):
 
 class TextField(TextFieldYear):
     def __init__(self, name, signal):
-        super().__init__(name, signal, 0)
+        super().__init__(name, signal, 0, 1)
 
     def name(self):
         return self.name_
@@ -95,14 +129,6 @@ class OfstedRating(Column):
         return ''
 
 
-class Year(Column):
-    def __init__(self, year):
-        self.year_ = year
-
-    def name(self):
-        return str(self.year_) + ' ' + super().name()
-
-
 def total_schools(year):
     if year == 0:
         return '16,080'
@@ -121,13 +147,17 @@ class Rank(Year):
 
 
 class Reviews:
-    def __init__(self, question, answer, signal):
+    def __init__(self, weight, signal, question, answer):
+        self.weight_ = weight
+        self.signal_ = signal
         self.question_ = question
         self.answer_ = answer
-        self.signal_ = signal
 
     def name(self):
         return str(self.question_) + ' ' + str(self.answer_) + ' ' + self.__class__.__name__
+
+    def weight(self):
+        return self.weight_
 
     def signal(self):
         return self.signal_
@@ -140,6 +170,9 @@ class Reviews:
 
 
 class Oversubscribed(Year):
+    def weight(self):
+        return 0
+
     def signal(self):
         return 1
 
@@ -155,17 +188,20 @@ class Oversubscribed(Year):
         return re.sub(r'([0-9]+%).*', r'\1', oversubscribed)
 
 
-class Distribution:
-    def __init__(self, year, group):
-        self.year_ = year
+class Distribution(Year):
+    def __init__(self, year, num_years, group):
+        super().__init__(year, num_years)
         self.group_ = group
         self.class_ = 'infobox_catchment_chart'
 
     def name(self):
         return str(self.year_) + ' ' + str(self.group_) + ' ' + self.__class__.__name__
 
-    def signal(self):
+    def weight(self):
         return 0
+
+    def signal(self):
+        return 1
 
     def value(self, soup):
         tag = soup.find(class_=self.class_)
@@ -181,8 +217,8 @@ class Distribution:
 
 
 class LastDistanceOffered(Distribution):
-    def __init__(self, year):
-        super().__init__(year, 0)
+    def __init__(self, year, num_years):
+        super().__init__(year, num_years, 0)
         self.class_ = 'infobox_catchment_ldo_chart'
 
     def name(self):
@@ -192,6 +228,7 @@ class LastDistanceOffered(Distribution):
 def get_fields():
         fields = [
             Name(),
+            Address(),
             AtCapacity(),
             TextField('Pupils per Teacher', -1),
             TextField('Receives Free School Meals', -1),
@@ -203,36 +240,39 @@ def get_fields():
         ]
         for year in range(3):
             fields.extend([
-                Rank(year),
-                TextFieldYear('Pupils meeting the expected standard', 1, year),
-                TextFieldYear('Pupils achieving at a higher standard', 1, year),
-                TextFieldYearMultiplier('Reading', 1, year, 2, 0),
-                TextFieldYearMultiplier('Maths', 1, year, 2, 0),
-                TextFieldYearMultiplier('Reading', 1, year, 2, 1),
-                TextFieldYear('Writing', 1, year),
-                TextFieldYearMultiplier('Maths', 1, year, 2, 1),
+                Rank(year, 3),
+                TextFieldYear('Pupils meeting the expected standard', 1, year, 3),
+                TextFieldYear('Pupils achieving at a higher standard', 1, year, 3),
+                TextFieldYearMultiplier('Reading', 1, year, 3, 2, 0),
+                TextFieldYearMultiplier('Maths', 1, year, 3, 2, 0),
+                TextFieldYearMultiplier('Reading', 1, year, 3, 2, 1),
+                TextFieldYear('Writing', 1, year, 3),
+                TextFieldYearMultiplier('Maths', 1, year, 3, 2, 1),
             ])
         for question in range(11):
             fields.extend([
-                Reviews(question, 0, 1),
-                Reviews(question, 1, 0.5),
-                Reviews(question, 2, -0.5),
-                Reviews(question, 3, -1),
+                Reviews(1, 1, question, 0),
+                Reviews(0.5, 1, question, 1),
+                Reviews(0.5, -1, question, 2),
+                Reviews(1, -1, question, 3),
             ])
-        fields.append(Reviews(11, 0, 1))
-        fields.append(Reviews(11, 1, -1))
+        fields.append(Reviews(1, 1, 11, 0))
+        fields.append(Reviews(1, -1, 11, 1))
         for year in range(5):
-            fields.append(Oversubscribed(year))
+            fields.append(Oversubscribed(year, 5))
         for year in range(1, 3):
-            fields.append(LastDistanceOffered(year))
+            fields.append(LastDistanceOffered(year, 3))
         for year in range(7):
             for group in range(3):
-                fields.append(Distribution(year, group))
+                fields.append(Distribution(year, 7, group))
         return fields
 
 
 def main():
     fields = get_fields()
+    for field in fields:
+        print(field.weight(), end='\t')
+    print()
     for field in fields:
         print(field.signal(), end='\t')
     print()
