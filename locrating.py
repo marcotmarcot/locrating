@@ -147,26 +147,42 @@ class Rank(Year):
 
 
 class Reviews:
-    def __init__(self, weight, signal, question, answer):
-        self.weight_ = weight
+    def __init__(self, signal, name):
         self.signal_ = signal
-        self.question_ = question
-        self.answer_ = answer
+        self.name_ = name
 
     def name(self):
-        return str(self.question_) + ' ' + str(self.answer_) + ' ' + self.__class__.__name__
+        return self.name_
 
     def weight(self):
-        return self.weight_
+        return 1
 
     def signal(self):
         return self.signal_
 
     def value(self, soup):
-        tag = soup.find_all(class_='answers-graph')
-        if not tag:
+        text =  soup.find(text=self.name_)
+        if not text:
             return ''
-        return urllib.parse.parse_qs(urllib.parse.urlparse(tag[self.question_].img['src']).query)['chd'][0][2:].split(',')[self.answer_]
+        img = text.parent.next_sibling.next_sibling
+        if not img or img.name != 'img':
+            img = text.parent.parent.find('img')
+        answers = urllib.parse.parse_qs(urllib.parse.urlparse(img['src']).query)['chd'][0].split(':')[1].split(',')
+        answers = [int(answer) for answer in answers]
+        total = sum(answers)
+        if total == 0:
+            return ''
+        if len(answers) == 2:
+            if self.signal_ == 1:
+                return answers[0]/total
+            return answers[1]/total
+        if self.signal_ == 1:
+            if len(answers) == 6:
+                return 3*answers[0]/total + 2*answers[1]/total + answers[3]/total
+            return 2*answers[0]/total + answers[1]/total
+        if len(answers) == 6:
+            return 2*answers[4]/total + answers[3]/total
+        return 2*answers[3]/total + answers[2]/total
 
 
 class Oversubscribed(Year):
@@ -249,15 +265,34 @@ def get_fields():
                 TextFieldYear('Writing', 1, year, 3),
                 TextFieldYearMultiplier('Maths', 1, year, 3, 2, 1),
             ])
-        for question in range(11):
-            fields.extend([
-                Reviews(1, 1, question, 0),
-                Reviews(0.5, 1, question, 1),
-                Reviews(0.5, -1, question, 2),
-                Reviews(1, -1, question, 3),
-            ])
-        fields.append(Reviews(1, 1, 11, 0))
-        fields.append(Reviews(1, -1, 11, 1))
+        questions = [
+            '1. My child is happy at this school',
+            '2. My child feels safe at this school',
+            '3. My child makes good progress at this school',
+            '3. The school makes sure its pupils are well behaved.',
+            '4. My child is well looked after at this school',
+            '4. My child has been bullied and the school dealt with the bullying quickly and effectively.',
+            '5. My child is taught well at this school',
+            '5. The school makes me aware of what my child will learn during the year.',
+            '6. My child receives appropriate homework for their age',
+            '6. When I have raised concerns with the school they have been dealt with properly.',
+            '7. This school makes sure its pupils are well behaved',
+            '7. My child has SEND, and the school gives them the support they need to succeed.',
+            '8. This school deals effectively with bullying',
+            '8. The school has high expectations for my child.',
+            '9. This school is well led and managed',
+            '9. My child does well at this school.',
+            '10. This school responds well to any concerns I raise',
+            '10. The school lets me know how my child is doing.',
+            '11. I receive valuable information from the school about my child’s progress',
+            '11. There is a good range of subjects available to my child at this school.',
+            '12. Would you recommend this school to another parent?',
+            '12. My child can take part in clubs and activities at this school.',
+            '13. The school supports my child’s wider personal development.',
+            '14. I would recommend this school to another parent.']
+        for question in questions:
+            for signal in [1, -1]:
+                fields.append(Reviews(signal, question))
         for year in range(5):
             fields.append(Oversubscribed(year, 5))
         for year in range(1, 3):
