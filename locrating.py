@@ -147,12 +147,12 @@ class Rank(Year):
 
 
 class Reviews:
-    def __init__(self, signal, name):
+    def __init__(self, signal, phrasings):
         self.signal_ = signal
-        self.name_ = name
+        self.phrasings_ = phrasings
 
     def name(self):
-        return self.name_
+        return self.phrasings_[0]
 
     def weight(self):
         return 1
@@ -161,7 +161,10 @@ class Reviews:
         return self.signal_
 
     def value(self, soup):
-        text =  soup.find(text=self.name_)
+        for phrasing in self.phrasings_:
+            text =  soup.find(text=phrasing)
+            if text:
+                break
         if not text:
             return ''
         img = text.parent.next_sibling.next_sibling
@@ -266,30 +269,43 @@ def get_fields():
                 TextFieldYearMultiplier('Maths', 1, year, 3, 2, 1),
             ])
         questions = [
-            '1. My child is happy at this school',
-            '2. My child feels safe at this school',
-            '3. My child makes good progress at this school',
-            '3. The school makes sure its pupils are well behaved.',
-            '4. My child is well looked after at this school',
-            '4. My child has been bullied and the school dealt with the bullying quickly and effectively.',
-            '5. My child is taught well at this school',
-            '5. The school makes me aware of what my child will learn during the year.',
-            '6. My child receives appropriate homework for their age',
-            '6. When I have raised concerns with the school they have been dealt with properly.',
-            '7. This school makes sure its pupils are well behaved',
-            '7. My child has SEND, and the school gives them the support they need to succeed.',
-            '8. This school deals effectively with bullying',
-            '8. The school has high expectations for my child.',
-            '9. This school is well led and managed',
-            '9. My child does well at this school.',
-            '10. This school responds well to any concerns I raise',
-            '10. The school lets me know how my child is doing.',
-            '11. I receive valuable information from the school about my child’s progress',
-            '11. There is a good range of subjects available to my child at this school.',
-            '12. Would you recommend this school to another parent?',
-            '12. My child can take part in clubs and activities at this school.',
-            '13. The school supports my child’s wider personal development.',
-            '14. I would recommend this school to another parent.']
+            ['1. My child is happy at this school'],
+            ['2. My child feels safe at this school'],
+            [
+                '3. My child makes good progress at this school',
+                '9. My child does well at this school.',
+            ],
+            [
+                '3. The school makes sure its pupils are well behaved.',
+                '7. This school makes sure its pupils are well behaved',
+            ],
+            ['4. My child is well looked after at this school'],
+            [
+                '4. My child has been bullied and the school dealt with the bullying quickly and effectively.',
+                '8. This school deals effectively with bullying',
+            ],
+            ['5. My child is taught well at this school'],
+            ['5. The school makes me aware of what my child will learn during the year.'],
+            ['6. My child receives appropriate homework for their age'],
+            [
+                '6. When I have raised concerns with the school they have been dealt with properly.',
+                '10. This school responds well to any concerns I raise',
+            ],
+            ['7. My child has SEND, and the school gives them the support they need to succeed.'],
+            ['8. The school has high expectations for my child.'],
+            ['9. This school is well led and managed'],
+            [
+                '10. The school lets me know how my child is doing.',
+                '11. I receive valuable information from the school about my child’s progress',
+            ],
+            ['11. There is a good range of subjects available to my child at this school.'],
+            [
+                '12. Would you recommend this school to another parent?',
+                '14. I would recommend this school to another parent.',
+            ],
+            ['12. My child can take part in clubs and activities at this school.'],
+            ['13. The school supports my child’s wider personal development.'],
+        ]
         for question in questions:
             for signal in [1, -1]:
                 fields.append(Reviews(signal, question))
