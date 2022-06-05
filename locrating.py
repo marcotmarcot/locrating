@@ -47,6 +47,17 @@ class AtCapacity(Column):
         return re.sub(r'At ([0-9]+)% Capacity.*', r'\1%', soup.find(id='capacity').text)
 
 
+class White(Column):
+    def weight(self):
+        return 1
+
+    def signal(self):
+        return -1
+
+    def value(self, soup):
+        return float(TextField('White, British', 1).value(soup)[:-1]) + float(TextField('White, Other', 1).value(soup)[:-1])
+
+
 class Year(Column):
     def __init__(self, year, num_years):
         self.year_ = year
@@ -169,7 +180,9 @@ class Reviews:
             return ''
         img = text.parent.next_sibling.next_sibling
         if not img or img.name != 'img':
-            img = text.parent.parent.find('img')
+            img = text.parent.next_sibling.find('img')
+            if not img:
+                img = text.parent.parent.find('img')
         answers = urllib.parse.parse_qs(urllib.parse.urlparse(img['src']).query)['chd'][0].split(':')[1].split(',')
         answers = [int(answer) for answer in answers]
         total = sum(answers)
@@ -249,9 +262,10 @@ def get_fields():
             Name(),
             Address(),
             AtCapacity(),
+            White(),
             TextField('Pupils per Teacher', -1),
             TextField('Receives Free School Meals', -1),
-            TextField('First Language is not English', -1),
+            TextField('First Language is not English', 1),
             TextField('Persistent Absence', -1),
             TextField('Pupils with SEN Support', -1),
             OfstedYear(),
