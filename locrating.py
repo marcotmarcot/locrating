@@ -47,6 +47,13 @@ class AtCapacity(Column):
         return re.sub(r'At ([0-9]+)% Capacity.*', r'\1%', soup.find(id='capacity').text)
 
 
+def percent(soup, field):
+    text = TextField(field, 1).value(soup)[:-1]
+    if text == '':
+        return 0
+    return float(text)
+
+
 class White(Column):
     def weight(self):
         return 1
@@ -55,7 +62,7 @@ class White(Column):
         return -1
 
     def value(self, soup):
-        return float(TextField('White, British', 1).value(soup)[:-1]) + float(TextField('White, Other', 1).value(soup)[:-1])
+        return percent(soup, 'White, British') + percent(soup, 'White, Other')
 
 
 class Year(Column):
@@ -347,7 +354,7 @@ def main():
         if field.weight() != 0:
             print(field.name(), end='\t')
     print()
-    for file in os.listdir('responses'):
+    for file in sorted(os.listdir('responses')):
         with open('responses/' + file) as response:
             javascript = json.load(response)['d']
             html = eval(re.sub(r'popUpInfoWindow\((".*?[^\\]").*', r'\1', javascript))
